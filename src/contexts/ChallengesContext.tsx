@@ -1,6 +1,10 @@
 import { createContext, ReactNode, useEffect, useState } from 'react'
-import challenges from '../../challenges.json'
+// import Cookies from 'js-cookie' //biblioteca para trabalhar com cookies
+import Cookies from 'js-cookie'
 
+
+import challenges from '../../challenges.json'
+import { LevelUpModal } from '../components/LevelUpModas';
 interface Challenge{
   type: 'body' | 'eye'
   description: string
@@ -17,21 +21,28 @@ interface ChallengeContextData {
   startNewChallenge: () => void;
   resetChallenge: () => void;
   completeChallenge: () => void;
+  closeLevelUpModal: () => void;
 }
 
 interface ChallengesProviderProps {
   children: ReactNode
+  level: number;
+  currentExperience: number;
+  challengesCompleted: number;
 }
+
+
 
 export const ChallengesContext = createContext({} as ChallengeContextData)
 
-export function ChallengeProvider({ children }: ChallengesProviderProps) {
+export function ChallengeProvider({ children, ...rest }: ChallengesProviderProps) {
 
-  const [level, setLevel] = useState(1);
-  const [currentExperience, setCurrentExperience] = useState(0)
-  const [challengesCompleted, setChallengesCompleted] = useState(0)
+  const [level, setLevel] = useState(rest.level ?? 1);// se rest.level não existir use 1
+  const [currentExperience, setCurrentExperience] = useState(rest.currentExperience ?? 0)
+  const [challengesCompleted, setChallengesCompleted] = useState(rest.challengesCompleted ?? 0)
 
   const [activeChallenge, setActiveChallenge] = useState(null)
+  const [isLevelUpModalOpen, setIsLevelUpModalOpen] = useState(false)
 
   const experienceToNextLevel = Math.pow((level + 1) * 4, 2)
 
@@ -39,10 +50,22 @@ export function ChallengeProvider({ children }: ChallengesProviderProps) {
     Notification.requestPermission() //pedindo par enviar notificações para a api do própio browser Notification.requestPermission()
   }, [])// array vazio no final, executa a primeira função apenas 'uma' vez quado o componente for exibido em tela
 
+  useEffect(() => { //dispara um ou mais função assim que o parametro observado no array muda
+    Cookies.set('level', String(level))
+    Cookies.set('currentExperience', String(currentExperience))
+    Cookies.set('challengesCompleted', String(challengesCompleted))
+
+  }, [level, currentExperience, challengesCompleted])//parametros que estao sendo observados
+
   function levelUp() {
     setLevel(level + 1)
+    setIsLevelUpModalOpen(true)
   }
 
+  function closeLevelUpModal(){
+    setIsLevelUpModalOpen(false)
+  }
+ 
   function startNewChallenge() {
     const randomChallengesIndex = Math.floor(Math.random() * challenges.length)
     const challenge = challenges[randomChallengesIndex]
@@ -91,10 +114,14 @@ export function ChallengeProvider({ children }: ChallengesProviderProps) {
         startNewChallenge,
         activeChallenge,
         resetChallenge,
-        completeChallenge
+        completeChallenge,
+        closeLevelUpModal,
+
       }}
     >
       {children}
+
+      { isLevelUpModalOpen && <LevelUpModal/> } {/* se isLevelUpModalOpen mostre <LevelUpModal/> */}
     </ChallengesContext.Provider>
 
   )
